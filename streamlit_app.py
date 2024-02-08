@@ -1,4 +1,10 @@
-from openai import OpenAI
+from langchain.llms import HuggingFaceHub
+from langchain.document_loaders import PyPDFLoader,PyPDFDirectoryLoader
+from langchain.text_splitter import CharacterTextSplitter,RecursiveCharacterTextSplitter
+from langchain.embeddings import HuggingFaceInferenceAPIEmbeddings
+from langchain.vectorstores import  Chroma
+from langchain_community.vectorstores import Chroma
+from langchain.chains import RetrievalQA, LLMChain
 import streamlit as st
 
 st.title("ChatGPT-like clone")
