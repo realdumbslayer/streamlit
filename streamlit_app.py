@@ -1,24 +1,9 @@
-import streamlit as st
-import random
-import time
-
 from openai import OpenAI
 import streamlit as st
-from langchain.llms import HuggingFaceHub
-from langchain.document_loaders import PyPDFLoader,PyPDFDirectoryLoader
-from langchain.text_splitter import CharacterTextSplitter,RecursiveCharacterTextSplitter
-from langchain.embeddings import HuggingFaceInferenceAPIEmbeddings
-from langchain.vectorstores import  Chroma
-from langchain_community.vectorstores import Chroma
-from langchain.chains import RetrievalQA, LLMChain
-import os
 
 st.title("ChatGPT-like clone")
 
-
-client= HuggingFaceHub(hf_key=st.secrets["HUGGINGFACEHUB_API_TOKEN"])
-HF_TOKEN= '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'
-#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
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 if "openai_model" not in st.session_state:
     st.session_state["openai_model"] = "gpt-3.5-turbo"
