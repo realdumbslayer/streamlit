@@ -1,13 +1,13 @@
-!pip install langchain
-!pip install sentence_transformers
-!pip install torch
-!pip install sentencepiece
-!pip install transformers
-!pip install accelerate
-!pip install pypdf
-!pip install tiktoken
-!pip install streamlit
-!pip install chromadb
+pip install langchain
+pip install sentence_transformers
+pip install torch
+pip install sentencepiece
+pip install transformers
+pip install accelerate
+pip install pypdf
+pip install tiktoken
+pip install streamlit
+pip install chromadb
 
 import streamlit as st
 from langchain.text_splitter import RecursiveCharacterTextSplitter
