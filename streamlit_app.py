@@ -1,20 +1,15 @@
+!pip install langchain
+!pip install sentence_transformers
+!pip install torch
+!pip install sentencepiece
+!pip install transformers
+!pip install accelerate
+!pip install pypdf
+!pip install tiktoken
+!pip install streamlit
+!pip install chromadb
+
 import streamlit as st
-from streamlit_chat import message
-from streamlit_extras.colored_header import colored_header
-from streamlit_extras.add_vertical_space import add_vertical_space
-from hugchat import hugchat
-
-pip install langchain
-pip install sentence_transformers
-pip install torch
-pip install sentencepiece
-pip install transformers
-pip install accelerate
-pip install pypdf
-pip install tiktoken
-pip install streamlit
-pip install chromadb
-
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader, DirectoryLoader, PyPDFDirectoryLoader
 from langchain.chains.summarize import load_summarize_chain
