@@ -3,4 +3,4 @@ import streamlit as st
 st.title('My First Streamlit App')
 prompt = st.chat_input("Say something")
 if prompt:
-    st.write(f"User has sent the following prompt: {prompt}")
+    st.write(f"User: {prompt}")
