@@ -4,16 +4,16 @@ from streamlit_extras.colored_header import colored_header
 from streamlit_extras.add_vertical_space import add_vertical_space
 from hugchat import hugchat
 
-pip install -q langchain
-pip install -q sentence_transformers
-pip install -q torch
-pip install -q sentencepiece
-pip install -q transformers
-pip install -q accelerate
-pip install -q pypdf
-pip install -q tiktoken
-pip install -q streamlit
-pip install -q chromadb
+pip install langchain
+pip install sentence_transformers
+pip install torch
+pip install sentencepiece
+pip install transformers
+pip install accelerate
+pip install pypdf
+pip install tiktoken
+pip install streamlit
+pip install chromadb
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader, DirectoryLoader, PyPDFDirectoryLoader
