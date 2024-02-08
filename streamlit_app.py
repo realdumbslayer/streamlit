@@ -1,28 +1,69 @@
-# First
-from langchain.llms import HuggingFaceHub
-import os
 import streamlit as st
+from hugchat import hugchat
+from hugchat.login import Login
+import os
+
+# App title
+st.set_page_config(page_title="🤗💬 HugChat")
+
+# Hugging Face Credentials
 with st.sidebar:
-    hf_key = st.text_input("HuggingFace API Key", key="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", type="password")
+    st.title('🤗💬 HugChat')
+    if ('EMAIL' in st.secrets) and ('PASS' in st.secrets):
+        st.success('HuggingFace Login credentials already provided!', icon='✅')
+        hf_email = st.secrets['EMAIL']
+        hf_pass = st.secrets['PASS']
+    else:
+        hf_email = st.text_input('Enter E-mail:', type='password')
+        hf_pass = st.text_input('Enter password:', type='password')
+        if not (hf_email and hf_pass):
+            st.warning('Please enter your credentials!', icon='⚠️')
+        else:
+            st.success('Proceed to entering your prompt message!', icon='👉')
+    st.markdown('📖 Learn how to build this app in this [blog](https://blog.streamlit.io/how-to-build-an-llm-powered-chatbot-with-streamlit/)!')
 
-st.title("💬 Chatbot") if "messages" not in st.session_state:
-    st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
+# Store LLM generated responses
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
 
-for msg in st.session_state.messages:
-    st.chat_message(msg["role"]).write(msg["content"])
+# Display or clear chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 
-if prompt := st.chat_input():
-    if not hf_key:
-        st.info("Please add your HuggingFace API key to continue.")
-        st.stop()
+def clear_chat_history():
+    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
+st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
 
-    os.environ["HUGGINGFACEHUB_API_TOKEN"] = hf_key
+# Function for generating LLM response
+def generate_response(prompt_input, email, passwd):
+    # Hugging Face Login
+    sign = Login(email, passwd)
+    cookies = sign.login()
+    # Create ChatBot                        
+    chatbot = hugchat.ChatBot(cookies=cookies.get_dict())
+
+    for dict_message in st.session_state.messages:
+        string_dialogue = "You are a helpful assistant."
+        if dict_message["role"] == "user":
+            string_dialogue += "User: " + dict_message["content"] + "\n\n"
+        else:
+            string_dialogue += "Assistant: " + dict_message["content"] + "\n\n"
+
+    prompt = f"{string_dialogue} {prompt_input} Assistant: "
+    return chatbot.chat(prompt)
+
+# User-provided prompt
+if prompt := st.chat_input(disabled=not (hf_email and hf_pass)):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    st.chat_message("user").write(prompt)
-    llm = HuggingFaceHub(
-    repo_id="huggingfaceh4/zephyr-7b-alpha",
-    model_kwargs={"temperature": 0.5, "max_length": 64,"max_new_tokens":512}
-)
-    msg = response.choices[0].message
-    st.session_state.messages.append(msg)
-    st.chat_message("assistant").write(msg.content)
+    with st.chat_message("user"):
+        st.write(prompt)
+
+# Generate a new response if last message is not from assistant
+if st.session_state.messages[-1]["role"] != "assistant":
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            response = generate_response(prompt, hf_email, hf_pass) 
+            st.write(response) 
+    message = {"role": "assistant", "content": response}
+    st.session_state.messages.append(message)
