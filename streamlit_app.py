@@ -1,107 +1,58 @@
-from langchain.chat_models import ChatAnthropic
-from langchain import PromptTemplate, LLMChain
-from langchain.prompts.chat import (
-    ChatPromptTemplate,
-    SystemMessagePromptTemplate,
-    AIMessagePromptTemplate,
-    HumanMessagePromptTemplate,
-)
-from langchain.schema import AIMessage, HumanMessage, SystemMessage
 import streamlit as st
-from dotenv import load_dotenv
-import PyPDF2
+from langchain.llms import HuggingFaceHub
+from langchain.document_loaders import PyPDFDirectoryLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import Chroma
+from langchain.chains import RetrievalQA
 
-load_dotenv()
+# Set up Hugging Face token
+HF_TOKEN = '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'
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = HF_TOKEN
 
+# Load PDF documents
+loader = PyPDFDirectoryLoader("pdfs")
+loader.requests_per_second = 1
+docs = loader.load()
 
-class LegalExpert:
-    def __init__(self):
-        self.system_prompt = self.get_system_prompt()
+# Split documents into chunks
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=64)
+chunks = text_splitter.split_documents(docs)
 
-        self.user_prompt = HumanMessagePromptTemplate.from_template("{legal_question}")
+# Create vector store
+vectorstore = Chroma.from_documents(chunks, persist_directory="db")
 
-        full_prompt_template = ChatPromptTemplate.from_messages(
-            [self.system_prompt, self.user_prompt]
-        )
+# Create retriever
+retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 4})
 
-        self.chat = ChatAnthropic()
+# Set up language model
+llm = HuggingFaceHub(
+    repo_id="mistralai/Mixtral-8x7B-Instruct-v0.1",
+    model_kwargs={"temperature": 0.5, "max_length": 64, "max_new_tokens": 512}
+)
 
-        self.chain = LLMChain(llm=self.chat, prompt=full_prompt_template)
+# Create Streamlit app
+st.title("Chat with AI")
 
-    def get_system_prompt(self):
-        system_prompt = """
-        You are a Canadian Legal Expert. 
+# Define system prompt
+DEFAULT_SYSTEM_PROMPT = """
+You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
 
-        Under no circumstances do you give legal advice.
-        
-        You are adept at explaining the law in laymans terms, and you are able to provide context to legal questions.
+If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
+""".strip()
 
-        While you can add context outside of the provided context, please do not add any information that is not directly relevant to the question, or the provided context.
+# Define Streamlit chat interface
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-        You speak {language}.
+for message in st.session_state.messages:
+    with st.expander(message["role"]):
+        st.write(message["content"])
 
-        ### CONTEXT
-        {context}
+if prompt := st.text_input("User:"):
+    st.session_state.messages.append({"role": "User", "content": prompt})
 
-        ### END OF CONTEXT
-        """
-
-        return SystemMessagePromptTemplate.from_template(system_prompt)
-
-    def run_chain(self, language, context, question):
-        return self.chain.run(
-            language=language, context=context, legal_question=question
-        )
-
-
-def retrieve_pdf_text(pdf_file):
-    pdf_reader = PyPDF2.PdfReader(pdf_file)
-    text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
-    return text
-
-
-# create a streamlit app
-st.title("Canadian Legal Explainer (that does not give advice)")
-
-if "LegalExpert" not in st.session_state:
-    st.session_state.LegalExpert = LegalExpert()
-
-# create a upload file widget for a pdf
-pdf_file = st.file_uploader("Upload a PDF file", type=["pdf"])
-
-# if a pdf file is uploaded
-if pdf_file:
-    # retrieve the text from the pdf
-    if "context" not in st.session_state:
-        st.session_state.context = retrieve_pdf_text(pdf_file)
-
-# create a button that clears the context
-if st.button("Clear context"):
-    st.session_state.__delitem__("context")
-    st.session_state.__delitem__("legal_response")
-
-# if there's context, proceed
-if "context" in st.session_state:
-    # create a dropdown widget for the language
-    language = st.selectbox("Language", ["English", "Français"])
-    # create a text input widget for a question
-    question = st.text_input("Ask a question")
-
-    # create a button to run the model
-    if st.button("Run"):
-        # run the model
-        legal_response = st.session_state.LegalExpert.run_chain(
-            language=language, context=st.session_state.context, question=question
-        )
-
-        if "legal_response" not in st.session_state:
-            st.session_state.legal_response = legal_response
-
-        else:
-            st.session_state.legal_response = legal_response
-
-# display the response
-if "legal_response" in st.session_state:
-    st.write(st.session_state.legal_response)
+    # Generate response
+    query = prompt
+    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="refine", retriever=retriever)
+    response = qa.run(DEFAULT_SYSTEM_PROMPT)
+    st.session_state.messages.append({"role": "AI", "content": response})
